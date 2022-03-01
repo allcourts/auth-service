@@ -4,7 +4,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Chance } from 'chance';
 import { configServiceMock } from 'src/config/test/config.mock';
 import { SupabaseService } from 'src/supabase/supabase.service';
-import { supabaseMock } from 'src/supabase/test/supabase.mock';
+import {
+  supabaseSessionMock,
+  supabaseApiErrorMock,
+} from 'src/supabase/test/supabase.mock';
 import { SignInDto } from '../dto/sign-in.dto';
 import { SignUpDto } from '../dto/sign-up.dto';
 
@@ -40,11 +43,11 @@ describe('SupabaseService', () => {
         password: chance.string(),
       };
 
-      const supabaseSessionMock = supabaseMock.session();
-      supabaseSessionMock.user.email = bodyMock.email;
+      const sessionMock = supabaseSessionMock();
+      sessionMock.user.email = bodyMock.email;
 
       const supabaseClientResponseMock = {
-        data: supabaseSessionMock,
+        data: sessionMock,
       };
 
       supabaseService['client'].auth.api.signUpWithEmail = jest
@@ -69,9 +72,9 @@ describe('SupabaseService', () => {
         password: chance.string(),
       };
 
-      const supabaseApiErrorMock = supabaseMock.error({ status: 400 });
+      const apiErrorMock = supabaseApiErrorMock({ status: 400 });
       const supabaseClientResponseMock = {
-        error: supabaseApiErrorMock,
+        error: apiErrorMock,
       };
 
       supabaseService['client'].auth.api.signUpWithEmail = jest
@@ -89,8 +92,8 @@ describe('SupabaseService', () => {
           supabaseService['client'].auth.api.signUpWithEmail,
         ).toBeCalledWith(bodyMock.email, bodyMock.password);
         expect(err).toBeInstanceOf(HttpException);
-        expect(err.status).toBe(supabaseApiErrorMock.status);
-        expect(err.message).toBe(supabaseApiErrorMock.message);
+        expect(err.status).toBe(apiErrorMock.status);
+        expect(err.message).toBe(apiErrorMock.message);
       }
     });
   });
@@ -102,11 +105,11 @@ describe('SupabaseService', () => {
         password: chance.string(),
       };
 
-      const supabaseSessionMock = supabaseMock.session();
-      supabaseSessionMock.user.email = bodyMock.email;
+      const sessionMock = supabaseSessionMock();
+      sessionMock.user.email = bodyMock.email;
 
       const supabaseClientResponseMock = {
-        data: supabaseSessionMock,
+        data: sessionMock,
       };
 
       supabaseService['client'].auth.api.signInWithEmail = jest
@@ -131,9 +134,9 @@ describe('SupabaseService', () => {
         password: chance.string(),
       };
 
-      const supabaseApiErrorMock = supabaseMock.error({ status: 400 });
+      const apiErrorMock = supabaseApiErrorMock({ status: 400 });
       const supabaseClientResponseMock = {
-        error: supabaseApiErrorMock,
+        error: apiErrorMock,
       };
 
       supabaseService['client'].auth.api.signInWithEmail = jest
@@ -151,8 +154,8 @@ describe('SupabaseService', () => {
           supabaseService['client'].auth.api.signInWithEmail,
         ).toBeCalledWith(bodyMock.email, bodyMock.password);
         expect(err).toBeInstanceOf(HttpException);
-        expect(err.status).toBe(supabaseApiErrorMock.status);
-        expect(err.message).toBe(supabaseApiErrorMock.message);
+        expect(err.status).toBe(apiErrorMock.status);
+        expect(err.message).toBe(apiErrorMock.message);
       }
     });
   });
@@ -176,9 +179,9 @@ describe('SupabaseService', () => {
     it('should throw HttpException with status 400', async () => {
       const jwtMock = chance.string();
 
-      const supabaseApiErrorMock = supabaseMock.error({ status: 400 });
+      const apiErrorMock = supabaseApiErrorMock({ status: 400 });
       const supabaseClientResponseMock = {
-        error: supabaseApiErrorMock,
+        error: apiErrorMock,
       };
 
       supabaseService['client'].auth.api.signOut = jest
@@ -194,8 +197,8 @@ describe('SupabaseService', () => {
           jwtMock,
         );
         expect(err).toBeInstanceOf(HttpException);
-        expect(err.status).toBe(supabaseApiErrorMock.status);
-        expect(err.message).toBe(supabaseApiErrorMock.message);
+        expect(err.status).toBe(apiErrorMock.status);
+        expect(err.message).toBe(apiErrorMock.message);
       }
     });
   });
@@ -215,9 +218,9 @@ describe('SupabaseService', () => {
     });
 
     it('should throw InternalServerErrorException', async () => {
-      const supabaseApiErrorMock = supabaseMock.error({ status: 400 });
+      const apiErrorMock = supabaseApiErrorMock({ status: 400 });
       const supabaseClientResponseMock = {
-        error: supabaseApiErrorMock,
+        error: apiErrorMock,
       };
       const selectFunctionMock = jest
         .fn()
@@ -233,7 +236,7 @@ describe('SupabaseService', () => {
       } catch (err) {
         expect(selectFunctionMock).toBeCalledTimes(1);
         expect(err).toBeInstanceOf(InternalServerErrorException);
-        expect(err.message).toBe(supabaseApiErrorMock.message);
+        expect(err.message).toBe(apiErrorMock.message);
       }
     });
   });

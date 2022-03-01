@@ -3,13 +3,7 @@ import { Chance } from 'chance';
 
 const chance = new Chance();
 
-interface SupabaseMock {
-  user: (user?: Partial<User>) => User;
-  session: (session?: Partial<Session>) => Session;
-  error: (error?: Partial<ApiError>) => ApiError;
-}
-
-const user = (user?: Partial<User>): User => ({
+export const supabaseUserMock = (user?: Partial<User>): User => ({
   id: chance.string(),
   app_metadata: {},
   user_metadata: {},
@@ -31,24 +25,18 @@ const user = (user?: Partial<User>): User => ({
   ...user,
 });
 
-const session = (session?: Partial<Session>): Session => ({
+export const supabaseSessionMock = (session?: Partial<Session>): Session => ({
   access_token: chance.string(),
   expires_in: chance.integer(),
   expires_at: chance.integer(),
   refresh_token: chance.string(),
   token_type: chance.string(),
-  user: user(),
+  user: supabaseUserMock(),
   ...session,
 });
 
-const error = (error?: Partial<ApiError>): ApiError => ({
+export const supabaseApiErrorMock = (error?: Partial<ApiError>): ApiError => ({
   message: chance.string(),
   status: 500,
   ...error,
 });
-
-export const supabaseMock: SupabaseMock = {
-  user,
-  session,
-  error,
-};

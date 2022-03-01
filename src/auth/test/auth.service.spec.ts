@@ -5,7 +5,7 @@ import { Session } from '@supabase/supabase-js';
 import { Chance } from 'chance';
 import { configServiceMock } from 'src/config/test/config.mock';
 import { SupabaseService } from 'src/supabase/supabase.service';
-import { supabaseMock } from 'src/supabase/test/supabase.mock';
+import { supabaseSessionMock } from 'src/supabase/test/supabase.mock';
 import { AuthService } from '../auth.service';
 import { AuthSession } from '../dto/auth-session.dto';
 import { SignUpBodyDto } from '../dto/sign-up-body.dto';
@@ -56,12 +56,12 @@ describe('AuthService', () => {
         password: chance.string(),
       };
 
-      const supabaseSessionMock = supabaseMock.session();
-      supabaseSessionMock.user.email = bodyMock.email;
+      const sessionMock = supabaseSessionMock();
+      sessionMock.user.email = bodyMock.email;
 
-      const authSessionMock = getAuthSession(supabaseSessionMock);
+      const authSessionMock = getAuthSession(sessionMock);
 
-      supabaseService.signUp = jest.fn().mockResolvedValue(supabaseSessionMock);
+      supabaseService.signUp = jest.fn().mockResolvedValue(sessionMock);
 
       const session = await authService.signUp(bodyMock);
 
@@ -98,12 +98,12 @@ describe('AuthService', () => {
         password: chance.string(),
       };
 
-      const supabaseSessionMock = supabaseMock.session();
-      supabaseSessionMock.user.email = bodyMock.email;
+      const sessionMock = supabaseSessionMock();
+      sessionMock.user.email = bodyMock.email;
 
-      const authSessionMock = getAuthSession(supabaseSessionMock);
+      const authSessionMock = getAuthSession(sessionMock);
 
-      supabaseService.signIn = jest.fn().mockResolvedValue(supabaseSessionMock);
+      supabaseService.signIn = jest.fn().mockResolvedValue(sessionMock);
 
       const session = await authService.signIn(bodyMock);
 
