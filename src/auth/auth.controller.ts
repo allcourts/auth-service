@@ -11,7 +11,7 @@ import { SignUpBodyDto } from './dto/sign-up-body.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('signUp')
+  @Post('signup')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthSession })
   async signUp(@Body() body: SignUpBodyDto) {
@@ -20,7 +20,7 @@ export class AuthController {
     return session;
   }
 
-  @Post('signIn')
+  @Post('signin')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthSession })
   async signIn(@Body() body: SignInBodyDto) {
@@ -29,7 +29,7 @@ export class AuthController {
     return session;
   }
 
-  @Post('signOut')
+  @Post('signout')
   @HttpCode(HttpStatus.OK)
   @ApiNoContentResponse()
   async signOut(@Body() body: SignOutBodyDto) {
