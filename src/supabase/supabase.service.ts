@@ -5,44 +5,67 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createClient, Session, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseConfig } from 'src/config/base.config';
-import { SignInDto } from './dto/sign-in.dto';
-import { SignUpDto } from './dto/sign-up.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { EmailSignInDto } from './dto/email-sign-in.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
   private client: SupabaseClient;
+  private isEmailConfirmationEnabled: boolean;
 
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    const { url, key } =
+    const { url, key, emailConfirmation } =
       this.configService.get<SupabaseConfig>('base.supabase');
 
     this.client = createClient(url, key);
+    this.isEmailConfirmationEnabled = emailConfirmation;
     this.logger.log('Supabase client initialized');
   }
 
-  async signUp(signUpDto: SignUpDto) {
-    const { email, password } = signUpDto;
-    const { data, error } = await this.client.auth.api.signUpWithEmail(
+  async createUser(createUserDto: CreateUserDto) {
+    const { email, password, userMetadata } = createUserDto;
+
+    const { data, error } = await this.client.auth.api.createUser({
       email,
       password,
-    );
+      user_metadata: userMetadata,
+      email_confirm: this.isEmailConfirmationEnabled,
+    });
 
     if (error) {
-      this.logger.log(`Error on user sign up: ${JSON.stringify(error)}`);
+      this.logger.log(`Error on create user: ${JSON.stringify(error)}`);
 
       throw new HttpException(error.message, error.status);
     }
 
-    return data as Session;
+    return data;
   }
 
-  async signIn(signInDto: SignInDto) {
-    const { email, password } = signInDto;
+  async updateUserById(id: string, updateUserDto: UpdateUserDto) {
+    const { email, userMetadata } = updateUserDto;
+    const { data, error } = await this.client.auth.api.updateUserById(id, {
+      email,
+      user_metadata: userMetadata,
+      email_confirm: email ? this.isEmailConfirmationEnabled : undefined,
+    });
+
+    if (error) {
+      this.logger.log(`Error on update user: ${JSON.stringify(error)}`);
+
+      throw new HttpException(error.message, error.status);
+    }
+
+    return data;
+  }
+
+  async signIn(emailSignInDto: EmailSignInDto) {
+    const { email, password } = emailSignInDto;
     const { data, error } = await this.client.auth.api.signInWithEmail(
       email,
       password,

@@ -7,9 +7,11 @@ import { SupabaseService } from 'src/supabase/supabase.service';
 import {
   supabaseSessionMock,
   supabaseApiErrorMock,
+  supabaseUserMock,
 } from 'src/supabase/test/supabase.mock';
-import { SignInDto } from '../dto/sign-in.dto';
-import { SignUpDto } from '../dto/sign-up.dto';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { EmailSignInDto } from '../dto/email-sign-in.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 
 const chance = new Chance();
 
@@ -36,38 +38,41 @@ describe('SupabaseService', () => {
     } as any;
   });
 
-  describe('signUp', () => {
-    it('should signUp successfully', async () => {
-      const bodyMock: SignUpDto = {
+  describe('createUser', () => {
+    beforeEach(() => {
+      supabaseService['isEmailConfirmationEnabled'] = false;
+    });
+
+    it('should create a user', async () => {
+      const bodyMock: CreateUserDto = {
         email: chance.email(),
         password: chance.string(),
       };
 
-      const sessionMock = supabaseSessionMock();
-      sessionMock.user.email = bodyMock.email;
+      const userMock = supabaseUserMock({ email: bodyMock.email });
 
       const supabaseClientResponseMock = {
-        data: sessionMock,
+        data: userMock,
       };
 
-      supabaseService['client'].auth.api.signUpWithEmail = jest
+      supabaseService['client'].auth.api.createUser = jest
         .fn()
         .mockResolvedValue(supabaseClientResponseMock);
 
-      const session = await supabaseService.signUp(bodyMock);
+      const user = await supabaseService.createUser(bodyMock);
 
-      expect(
-        supabaseService['client'].auth.api.signUpWithEmail,
-      ).toBeCalledTimes(1);
-      expect(supabaseService['client'].auth.api.signUpWithEmail).toBeCalledWith(
-        bodyMock.email,
-        bodyMock.password,
-      );
-      expect(session).toStrictEqual(supabaseClientResponseMock.data);
+      expect(supabaseService['client'].auth.api.createUser).toBeCalledTimes(1);
+      expect(supabaseService['client'].auth.api.createUser).toBeCalledWith({
+        email: bodyMock.email,
+        password: bodyMock.password,
+        user_metadata: bodyMock.userMetadata,
+        email_confirm: false,
+      });
+      expect(user).toStrictEqual(supabaseClientResponseMock.data);
     });
 
     it('should throw HttpException with status 400', async () => {
-      const bodyMock: SignUpDto = {
+      const bodyMock: CreateUserDto = {
         email: chance.email(),
         password: chance.string(),
       };
@@ -77,20 +82,91 @@ describe('SupabaseService', () => {
         error: apiErrorMock,
       };
 
-      supabaseService['client'].auth.api.signUpWithEmail = jest
+      supabaseService['client'].auth.api.createUser = jest
         .fn()
         .mockResolvedValue(supabaseClientResponseMock);
 
       try {
-        await supabaseService.signUp(bodyMock);
+        await supabaseService.createUser(bodyMock);
+        fail('should have thrown HttpException with status 400');
+      } catch (err) {
+        expect(supabaseService['client'].auth.api.createUser).toBeCalledTimes(
+          1,
+        );
+        expect(supabaseService['client'].auth.api.createUser).toBeCalledWith({
+          email: bodyMock.email,
+          password: bodyMock.password,
+          user_metadata: bodyMock.userMetadata,
+          email_confirm: false,
+        });
+        expect(err).toBeInstanceOf(HttpException);
+        expect(err.status).toBe(apiErrorMock.status);
+        expect(err.message).toBe(apiErrorMock.message);
+      }
+    });
+  });
+
+  describe('updateUserById', () => {
+    it('should update a user', async () => {
+      const userIdMock = chance.string();
+      const bodyMock: UpdateUserDto = {
+        userMetadata: { id: chance.string() },
+      };
+
+      const userMock = supabaseUserMock({ id: userIdMock });
+
+      const supabaseClientResponseMock = {
+        data: userMock,
+      };
+
+      supabaseService['client'].auth.api.updateUserById = jest
+        .fn()
+        .mockResolvedValue(supabaseClientResponseMock);
+
+      const user = await supabaseService.updateUserById(userIdMock, bodyMock);
+
+      expect(supabaseService['client'].auth.api.updateUserById).toBeCalledTimes(
+        1,
+      );
+      expect(supabaseService['client'].auth.api.updateUserById).toBeCalledWith(
+        userIdMock,
+        {
+          email: bodyMock.email,
+          user_metadata: bodyMock.userMetadata,
+        },
+      );
+      expect(user).toStrictEqual(supabaseClientResponseMock.data);
+    });
+
+    it('should throw HttpException with status 400', async () => {
+      const userIdMock = chance.string();
+      const bodyMock: CreateUserDto = {
+        email: chance.email(),
+        password: chance.string(),
+      };
+
+      const apiErrorMock = supabaseApiErrorMock({ status: 400 });
+      const supabaseClientResponseMock = {
+        error: apiErrorMock,
+      };
+
+      supabaseService['client'].auth.api.updateUserById = jest
+        .fn()
+        .mockResolvedValue(supabaseClientResponseMock);
+
+      try {
+        await supabaseService.updateUserById(userIdMock, bodyMock);
         fail('should have thrown HttpException with status 400');
       } catch (err) {
         expect(
-          supabaseService['client'].auth.api.signUpWithEmail,
+          supabaseService['client'].auth.api.updateUserById,
         ).toBeCalledTimes(1);
         expect(
-          supabaseService['client'].auth.api.signUpWithEmail,
-        ).toBeCalledWith(bodyMock.email, bodyMock.password);
+          supabaseService['client'].auth.api.updateUserById,
+        ).toBeCalledWith(userIdMock, {
+          email: bodyMock.email,
+          user_metadata: bodyMock.userMetadata,
+        });
         expect(err).toBeInstanceOf(HttpException);
         expect(err.status).toBe(apiErrorMock.status);
         expect(err.message).toBe(apiErrorMock.message);
@@ -100,7 +176,7 @@ describe('SupabaseService', () => {
 
   describe('signIn', () => {
     it('should signIn successfully', async () => {
-      const bodyMock: SignInDto = {
+      const bodyMock: EmailSignInDto = {
         email: chance.email(),
         password: chance.string(),
       };
@@ -129,7 +205,7 @@ describe('SupabaseService', () => {
     });
 
     it('should throw HttpException with status 400', async () => {
-      const bodyMock: SignInDto = {
+      const bodyMock: EmailSignInDto = {
         email: chance.email(),
         password: chance.string(),
       };

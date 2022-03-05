@@ -17,7 +17,7 @@ export class AppController {
 
   @Get('/status')
   @HttpCode(HttpStatus.OK)
-  async getStatus() {
-    return await this.appService.getStatus();
+  async status() {
+    return await this.appService.status();
   }
 }

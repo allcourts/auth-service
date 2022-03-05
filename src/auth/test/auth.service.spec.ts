@@ -6,8 +6,12 @@ import { Chance } from 'chance';
 import { configServiceMock } from 'src/config/test/config.mock';
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { supabaseSessionMock } from 'src/supabase/test/supabase.mock';
+import { UserMessagingService } from 'src/user-messaging/user-messaging.service';
+import { userMock } from 'src/user/test/user.mock';
+import { UserService } from 'src/user/user.service';
 import { AuthService } from '../auth.service';
 import { AuthSession } from '../dto/auth-session.dto';
+import { SignInBodyDto } from '../dto/sign-in-body.dto';
 import { SignUpBodyDto } from '../dto/sign-up-body.dto';
 
 const chance = new Chance();
@@ -15,12 +19,20 @@ const chance = new Chance();
 describe('AuthService', () => {
   let authService: AuthService;
   let supabaseService: SupabaseService;
+  let userService: UserService;
+  let userMessagingService: UserMessagingService;
 
   beforeEach(async () => {
+    supabaseService = new SupabaseService(null);
+    userService = new UserService(null);
+    userMessagingService = new UserMessagingService(null);
+
     const app: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        SupabaseService,
+        { provide: SupabaseService, useValue: supabaseService },
+        { provide: UserService, useValue: userService },
+        { provide: UserMessagingService, useValue: userMessagingService },
         {
           provide: ConfigService,
           useValue: configServiceMock,
@@ -30,6 +42,8 @@ describe('AuthService', () => {
 
     authService = app.get<AuthService>(AuthService);
     supabaseService = app.get<SupabaseService>(SupabaseService);
+    userService = app.get<UserService>(UserService);
+    userMessagingService = app.get<UserMessagingService>(UserMessagingService);
   });
 
   function getAuthSession(session: Session): AuthSession {
@@ -54,6 +68,7 @@ describe('AuthService', () => {
       const bodyMock: SignUpBodyDto = {
         email: chance.email(),
         password: chance.string(),
+        name: chance.string(),
       };
 
       const sessionMock = supabaseSessionMock();
@@ -61,12 +76,58 @@ describe('AuthService', () => {
 
       const authSessionMock = getAuthSession(sessionMock);
 
-      supabaseService.signUp = jest.fn().mockResolvedValue(sessionMock);
+      const userEntityMock = userMock({
+        name: bodyMock.name,
+        authId: sessionMock.user.id,
+      });
+
+      supabaseService.createUser = jest
+        .fn()
+        .mockResolvedValue(sessionMock.user);
+
+      userService.create = jest.fn().mockResolvedValue(userEntityMock);
+
+      supabaseService.updateUserById = jest.fn();
+
+      userMessagingService.publishUserSignUpMessage = jest.fn();
+
+      authService.signIn = jest.fn().mockResolvedValue(authSessionMock);
 
       const session = await authService.signUp(bodyMock);
 
-      expect(supabaseService.signUp).toBeCalledTimes(1);
-      expect(supabaseService.signUp).toBeCalledWith(bodyMock);
+      expect(supabaseService.createUser).toBeCalledTimes(1);
+      expect(supabaseService.createUser).toBeCalledWith({
+        email: bodyMock.email,
+        password: bodyMock.password,
+      });
+
+      expect(userService.create).toBeCalledTimes(1);
+      expect(userService.create).toBeCalledWith({
+        authId: sessionMock.user.id,
+        name: bodyMock.name,
+      });
+
+      expect(supabaseService.updateUserById).toBeCalledTimes(1);
+      expect(supabaseService.updateUserById).toBeCalledWith(
+        sessionMock.user.id,
+        {
+          userMetadata: { id: userEntityMock.id },
+        },
+      );
+
+      expect(userMessagingService.publishUserSignUpMessage).toBeCalledTimes(1);
+      expect(userMessagingService.publishUserSignUpMessage).toBeCalledWith({
+        id: userEntityMock.id,
+        email: sessionMock.user.email,
+        name: userEntityMock.name,
+      });
+
+      expect(authService.signIn).toBeCalledTimes(1);
+      expect(authService.signIn).toBeCalledWith({
+        email: bodyMock.email,
+        password: bodyMock.password,
+      });
+
       expect(session).toStrictEqual(authSessionMock);
     });
 
@@ -74,9 +135,10 @@ describe('AuthService', () => {
       const bodyMock: SignUpBodyDto = {
         email: chance.email(),
         password: chance.string(),
+        name: chance.string(),
       };
 
-      supabaseService.signUp = jest
+      supabaseService.createUser = jest
         .fn()
         .mockRejectedValue(new InternalServerErrorException());
 
@@ -84,8 +146,11 @@ describe('AuthService', () => {
         await authService.signUp(bodyMock);
         fail('should have thrown InternalServerErrorException');
       } catch (err) {
-        expect(supabaseService.signUp).toBeCalledTimes(1);
-        expect(supabaseService.signUp).toBeCalledWith(bodyMock);
+        expect(supabaseService.createUser).toBeCalledTimes(1);
+        expect(supabaseService.createUser).toBeCalledWith({
+          email: bodyMock.email,
+          password: bodyMock.password,
+        });
         expect(err).toBeInstanceOf(InternalServerErrorException);
       }
     });
@@ -93,7 +158,7 @@ describe('AuthService', () => {
 
   describe('signIn', () => {
     it('should signIn successfully', async () => {
-      const bodyMock: SignUpBodyDto = {
+      const bodyMock: SignInBodyDto = {
         email: chance.email(),
         password: chance.string(),
       };
@@ -113,7 +178,7 @@ describe('AuthService', () => {
     });
 
     it('should throw InternalServerErrorException', async () => {
-      const bodyMock: SignUpBodyDto = {
+      const bodyMock: SignInBodyDto = {
         email: chance.email(),
         password: chance.string(),
       };

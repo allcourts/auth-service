@@ -1,5 +1,6 @@
 import { plainToClass } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -30,18 +31,60 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   SUPABASE_JWT_SECRET: string;
+
+  @IsBoolean()
+  SUPABASE_EMAIL_CONFIRMATION: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  USER_RABBITMQ_URI: string;
+
+  @IsString()
+  @IsNotEmpty()
+  DB_HOST: string;
+
+  @IsNumber()
+  @IsPositive()
+  DB_PORT: number;
+
+  @IsString()
+  @IsNotEmpty()
+  DB_NAME: string;
+
+  @IsString()
+  @IsNotEmpty()
+  DB_USERNAME: string;
+
+  @IsString()
+  @IsNotEmpty()
+  DB_PASSWORD: string;
 }
 
 export interface SupabaseConfig {
   url: string;
   key: string;
   jwtSecret: string;
+  emailConfirmation: boolean;
+}
+
+export interface RabbitMQConfig {
+  userUri: string;
+}
+
+export interface DatabaseConfig {
+  host: string;
+  port: number;
+  name: string;
+  username: string;
+  password: string;
 }
 
 export interface EnvConfig {
   port: number;
   env: Environment;
   supabase: SupabaseConfig;
+  rabbitmq: RabbitMQConfig;
+  database: DatabaseConfig;
 }
 
 export default registerAs('base', () => {
@@ -63,6 +106,17 @@ export default registerAs('base', () => {
       url: validatedConfig.SUPABASE_URL,
       key: validatedConfig.SUPABASE_KEY,
       jwtSecret: validatedConfig.SUPABASE_JWT_SECRET,
+      emailConfirmation: validatedConfig.SUPABASE_EMAIL_CONFIRMATION,
+    },
+    rabbitmq: {
+      userUri: validatedConfig.USER_RABBITMQ_URI,
+    },
+    database: {
+      host: validatedConfig.DB_HOST,
+      port: validatedConfig.DB_PORT,
+      name: validatedConfig.DB_NAME,
+      username: validatedConfig.DB_USERNAME,
+      password: validatedConfig.DB_PASSWORD,
     },
   };
 

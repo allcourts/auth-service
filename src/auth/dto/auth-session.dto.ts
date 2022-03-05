@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class AuthUser {
+export class AuthUser {
   @ApiProperty({
     description: 'User unique identifier.',
     example: '71b3c064-a7df-4a6c-9588-dc347a284558',

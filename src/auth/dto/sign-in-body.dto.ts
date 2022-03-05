@@ -1,3 +1,3 @@
-import { UserCredential } from 'src/supabase/entity/user-credential.entity';
+import { UserCredentialsDto } from 'src/supabase/dto/user-credentials.dto';
 
-export class SignInBodyDto extends UserCredential {}
+export class SignInBodyDto extends UserCredentialsDto {}
