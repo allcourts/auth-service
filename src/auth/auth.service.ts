@@ -67,7 +67,7 @@ export class AuthService {
     };
   }
 
-  async signOut(signUpBodyDto: SignOutBodyDto) {
-    await this.supabaseService.signOut(signUpBodyDto.jwt);
+  async signOut(signOutBodyDto: SignOutBodyDto) {
+    await this.supabaseService.signOut(signOutBodyDto.jwt);
   }
 }
